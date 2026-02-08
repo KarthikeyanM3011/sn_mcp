@@ -36,6 +36,24 @@ from servicenow_mcp.tools.knowledge_base import (
 from servicenow_mcp.tools.knowledge_base import (
     update_article as update_article_tool,
 )
+from servicenow_mcp.tools.table_tools import (
+    ListTablesParams,
+    GetTableParams,
+    ListRecordsParams,
+    GetRecordParams,
+)
+from servicenow_mcp.tools.table_tools import (
+    list_tables as list_tables_tool,
+)
+from servicenow_mcp.tools.table_tools import (
+    get_table as get_table_tool,
+)
+from servicenow_mcp.tools.table_tools import (
+    list_records as list_records_tool,
+)
+from servicenow_mcp.tools.table_tools import (
+    get_record as get_record_tool,
+)
 
 ParamsModel = Type[Any]
 
@@ -113,6 +131,34 @@ def get_tool_definitions(
             GetArticleParams,
             Dict[str, Any],
             "Get a specific knowledge article by ID",
+            "raw_dict",
+        ),
+        "list_tables": (
+            list_tables_tool,
+            ListTablesParams,
+            Dict[str, Any],
+            "List all tables in ServiceNow",
+            "raw_dict",
+        ),
+        "get_table": (
+            get_table_tool,
+            GetTableParams,
+            Dict[str, Any],
+            "Get specific table details including all columns",
+            "raw_dict",
+        ),
+        "list_records": (
+            list_records_tool,
+            ListRecordsParams,
+            Dict[str, Any],
+            "List records from a specific table with custom filters",
+            "raw_dict",
+        ),
+        "get_record": (
+            get_record_tool,
+            GetRecordParams,
+            Dict[str, Any],
+            "Get a specific record from a table",
             "raw_dict",
         ),
     }

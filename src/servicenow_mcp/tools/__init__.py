@@ -13,6 +13,12 @@ from servicenow_mcp.tools.knowledge_base import (
     update_article,
     list_categories,
 )
+from servicenow_mcp.tools.table_tools import (
+    list_tables,
+    get_table,
+    list_records,
+    get_record,
+)
 
 __all__ = [
     "create_knowledge_base",
@@ -24,4 +30,8 @@ __all__ = [
     "publish_article",
     "list_articles",
     "get_article",
+    "list_tables",
+    "get_table",
+    "list_records",
+    "get_record",
 ]
