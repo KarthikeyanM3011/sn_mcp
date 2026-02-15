@@ -1,21 +1,10 @@
-# ServiceNow MCP Tool Packages Configuration
-# Define sets of tools to be exposed by the MCP server based on roles/workflows.
-# The MCP server loads tools based on the MCP_TOOL_PACKAGE environment variable.
-# If MCP_TOOL_PACKAGE is not set, 'full' is loaded.
-# If MCP_TOOL_PACKAGE is set to 'none', no tools are loaded (except list_tool_packages).
-
-# --- Package Definitions ---
-
 none: []
 
 knowledge_author:
-  # KB Management
   - create_knowledge_base
   - list_knowledge_bases
-  # KB Categories
-  - create_category  # KB specific category tool
-  - list_categories  # KB specific category tool
-  # Article Lifecycle
+  - create_category
+  - list_categories
   - create_article
   - update_article
   - publish_article
@@ -28,12 +17,14 @@ table_explorer:
   - list_records
   - get_record
 
+topic_extractor:
+  - extract_topic
+
 full:
-  # Knowledge Base
   - create_knowledge_base
   - list_knowledge_bases
-  - create_category # KB specific
-  - list_categories # KB specific
+  - create_category
+  - list_categories
   - create_article
   - update_article
   - publish_article
@@ -43,3 +34,4 @@ full:
   - get_table
   - list_records
   - get_record
+  - extract_topic
