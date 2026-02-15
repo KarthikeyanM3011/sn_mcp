@@ -54,6 +54,12 @@ from servicenow_mcp.tools.table_tools import (
 from servicenow_mcp.tools.table_tools import (
     get_record as get_record_tool,
 )
+from servicenow_mcp.tools.extract_topic import (
+    ExtractTopicParams,
+)
+from servicenow_mcp.tools.extract_topic import (
+    extract_topic as extract_topic_tool,
+)
 
 ParamsModel = Type[Any]
 
@@ -159,6 +165,13 @@ def get_tool_definitions(
             GetRecordParams,
             Dict[str, Any],
             "Get a specific record from a table",
+            "raw_dict",
+        ),
+        "extract_topic": (
+            extract_topic_tool,
+            ExtractTopicParams,
+            Dict[str, Any],
+            "Extract complete topic flow with all components, nodes, edges, variables, and nested dependencies from ServiceNow tables",
             "raw_dict",
         ),
     }
