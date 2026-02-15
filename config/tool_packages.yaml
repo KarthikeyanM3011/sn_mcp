@@ -19,6 +19,18 @@ table_explorer:
 
 topic_extractor:
   - extract_topic
+  - list_tables
+  - get_table
+  - list_records
+  - get_record
+
+flow_mapper:
+  - extract_topic
+  - map_flow_to_moveworks
+  - list_tables
+  - get_table
+  - list_records
+  - get_record
 
 full:
   - create_knowledge_base
@@ -35,3 +47,4 @@ full:
   - list_records
   - get_record
   - extract_topic
+  - map_flow_to_moveworks
