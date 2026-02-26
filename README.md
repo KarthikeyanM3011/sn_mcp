@@ -394,7 +394,7 @@ Add both servers to Claude Desktop configuration:
       "command": "/path/to/your/.venv/bin/python",
       "args": ["-m", "moveworks_mcp.cli"],
       "env": {
-        "MOVEWORKS_DOCS_BASE_URL": "https://developer.moveworks.com",
+        "MOVEWORKS_DOCS_BASE_URL": "https://help.moveworks.com/",
         "MOVEWORKS_DEBUG": "false"
       }
     }
@@ -868,32 +868,12 @@ python -m venv .venv
 source .venv/bin/activate
 
 # Install with dev dependencies
-pip install -e ".[dev]"
+pip install -e .
 
-# Run tests
-pytest
+python -m moveworks_mcp.cli
 
-# Format code
-black src/
-isort src/
-
-# Type check
-mypy src/
-
-# Lint
-ruff check src/
+python -m servicenow_mcp.cli
 ```
-
-### Contribution Guidelines
-
-1. **Fork** the repository
-2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
-3. **Make** your changes with tests
-4. **Format** code: `black src/ && isort src/`
-5. **Test**: `pytest`
-6. **Commit**: `git commit -m 'Add amazing feature'`
-7. **Push**: `git push origin feature/amazing-feature`
-8. **Open** a Pull Request
 
 ### Ideas for Contributions
 
