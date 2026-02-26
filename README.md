@@ -1,85 +1,78 @@
-# ServiceNow MCP Server
+# ServiceNow & Moveworks MCP Servers
 
-**Connect Claude AI to your ServiceNow instance** - Manage incidents, catalog items, change requests, and more using natural language.
+**Dual-server MCP implementation combining ServiceNow API integration with intelligent Moveworks documentation search**
 
-## What is this?
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![MCP 1.3.0](https://img.shields.io/badge/MCP-1.3.0-green.svg)](https://github.com/modelcontextprotocol)
 
-This MCP (Model Context Protocol) server lets you use Claude AI to interact with ServiceNow through simple, natural language conversations. Instead of navigating through ServiceNow's web interface, you can ask Claude to:
+## Overview
 
-- Create and manage incidents
-- Browse and organize the service catalog
-- Handle change requests and approvals
-- Manage knowledge articles
-- Administer users and groups
-- And much more!
+This repository provides two complementary Model Context Protocol (MCP) servers that work together to enable AI assistants like Claude to interact with ServiceNow instances and intelligently search Moveworks documentation:
 
-**Example:** Just ask Claude: *"Create a high priority incident for a network outage in the east region"* and it will do it for you.
+- **ServiceNow MCP Server** - Direct integration with ServiceNow APIs for knowledge base management and table operations
+- **Moveworks MCP Server** - Advanced documentation search with semantic understanding, intelligent crawling, and persistent knowledge bases
 
-## What is MCP?
+### What Makes This Special?
 
-MCP (Model Context Protocol) is a standard that allows AI assistants like Claude to securely connect to external services and tools. Think of it as a bridge that lets Claude safely interact with your ServiceNow instance on your behalf.
+Unlike standard MCP implementations, this project includes:
 
-## Key Capabilities
+✨ **Hybrid Search Engine** - Combines multi-query expansion, semantic embeddings, and keyword matching for superior documentation discovery
 
-### 🎫 Incident Management
-Create, update, resolve, and track incidents with simple commands
+🧠 **Semantic Understanding** - Uses sentence-transformers (all-MiniLM-L6-v2) to understand meaning, not just keywords
 
-### 📦 Service Catalog
-Browse items, manage categories, create variables, and optimize your catalog
+💾 **Persistent Knowledge Bases** - One-time indexing with instant retrieval, eliminating redundant web crawling
 
-### 🔄 Change Management
-Create change requests, add tasks, manage approvals, and track implementation
+🎯 **Smart Documentation Crawler** - Sitemap-aware crawler with relevance scoring and metadata extraction
 
-### 📚 Knowledge Base
-Create knowledge bases, organize articles, and publish content
+🔧 **Tool Package System** - Role-based tool filtering for focused, token-efficient interactions
 
-### 👥 User & Group Management
-Create users, manage groups, and handle permissions
+🌐 **URL Indexing** - Index external documentation with rich metadata (categories, tags, priority)
 
-### 📋 Agile Management
-Manage user stories, epics, scrum tasks, and projects
+---
 
-### ⚙️ Advanced Features
-- Workflow development and management
-- Script includes for server-side scripting
-- Changeset management for deployments
-- UI policies for dynamic forms
-- Multiple authentication methods (Basic, OAuth, API Key)
-- Debug mode for troubleshooting
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [ServiceNow MCP Server](#servicenow-mcp-server)
+- [Moveworks MCP Server](#moveworks-mcp-server)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage Examples](#usage-examples)
+- [Deployment Options](#deployment-options)
+- [Advanced Features](#advanced-features)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
 
 ---
 
 ## Quick Start
 
-### What You'll Need
+### Prerequisites
 
-- **Python 3.11 or higher** installed on your computer
-- **A ServiceNow instance** with login credentials
-- **5 minutes** to set everything up
+- Python 3.11 or higher
+- ServiceNow instance with API access (for ServiceNow MCP)
+- 5-10 minutes for setup
 
-### Installation Steps
+### Installation
 
-**Step 1: Get the code**
 ```bash
-git clone https://github.com/echelon-ai-labs/servicenow-mcp.git
-cd servicenow-mcp
-```
+# Clone the repository
+git clone https://github.com/KarthikeyanM3011/sn_mcp.git
+cd sn_mcp/sn_mcp
 
-**Step 2: Set up Python environment**
-```bash
-# Create a virtual environment
+# Create and activate virtual environment
 python -m venv .venv
-
-# Activate it
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install the package
 pip install -e .
 ```
 
-**Step 3: Configure your ServiceNow connection**
+### Configuration
 
-Create a file named `.env` in the project folder with your ServiceNow details:
+Create a `.env` file with your ServiceNow credentials:
 
 ```bash
 SERVICENOW_INSTANCE_URL=https://your-instance.service-now.com
@@ -88,31 +81,300 @@ SERVICENOW_PASSWORD=your-password
 SERVICENOW_AUTH_TYPE=basic
 ```
 
-> **Note:** Replace the values with your actual ServiceNow instance URL and credentials
-
-**Step 4: Test it out!**
+### Test the Servers
 
 ```bash
-python -m servicenow_mcp.cli
+# Test ServiceNow MCP server
+servicenow-mcp
+
+# Test Moveworks MCP server (in a new terminal)
+moveworks-mcp
 ```
 
 If you see no errors, you're all set! 🎉
 
 ---
 
-## Connecting to Claude Desktop
+## Architecture
 
-The easiest way to use this server is with Claude Desktop. Here's how:
+This project implements a **dual-server architecture** providing complementary capabilities:
 
-**Step 1: Find your config file**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Claude AI Assistant                     │
+└──────────────┬─────────────────────────┬────────────────────┘
+               │                         │
+               │ MCP Protocol            │ MCP Protocol
+               │                         │
+    ┌──────────▼──────────┐   ┌─────────▼──────────┐
+    │  ServiceNow MCP     │   │  Moveworks MCP     │
+    │  Server             │   │  Server            │
+    ├─────────────────────┤   ├────────────────────┤
+    │ • KB Management     │   │ • Hybrid Search    │
+    │ • Table Operations  │   │ • Semantic Search  │
+    │ • Tool Packages     │   │ • URL Indexing     │
+    │ • Multi-auth        │   │ • KB Persistence   │
+    └──────────┬──────────┘   └─────────┬──────────┘
+               │                        │
+               │ REST API               │ Web Crawling
+               │                        │
+    ┌──────────▼──────────┐   ┌─────────▼──────────┐
+    │  ServiceNow         │   │  Moveworks Docs    │
+    │  Instance           │   │  & External URLs   │
+    └─────────────────────┘   └────────────────────┘
+```
 
-The configuration file location depends on your operating system:
-- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows:** `%APPDATA%/Claude/claude_desktop_config.json`
+### Communication Modes
 
-**Step 2: Add the ServiceNow MCP server**
+Both servers support two transport modes:
 
-Edit the configuration file and add this (update the paths to match your setup):
+1. **stdio (Standard I/O)** - Direct integration with Claude Desktop
+2. **SSE (Server-Sent Events)** - HTTP-based for web applications and custom integrations
+
+---
+
+## ServiceNow MCP Server
+
+### Capabilities
+
+#### Knowledge Base Management (9 tools)
+
+Comprehensive knowledge base operations:
+
+- `create_knowledge_base` - Create new knowledge bases
+- `list_knowledge_bases` - List all available knowledge bases
+- `create_category` - Organize content with categories
+- `list_categories` - Browse category hierarchy
+- `create_article` - Author new knowledge articles
+- `update_article` - Modify existing articles
+- `publish_article` - Make articles visible to users
+- `list_articles` - Search and filter articles
+- `get_article` - Retrieve full article content
+
+#### Table Operations (4 tools)
+
+Generic ServiceNow table access:
+
+- `list_tables` - Discover available tables
+- `get_table` - Inspect table schema and columns
+- `list_records` - Query records from any table with filtering
+- `get_record` - Fetch specific records by sys_id
+
+### Tool Packages
+
+Control which tools are available based on user roles:
+
+| Package | Description | Tools Included |
+|---------|-------------|----------------|
+| `full` | All tools (default) | 13 tools |
+| `knowledge_author` | KB management only | 9 KB tools |
+| `table_explorer` | Table operations only | 4 table tools |
+| `none` | No tools (testing) | 0 tools |
+
+**Set via environment variable:**
+```bash
+export MCP_TOOL_PACKAGE=knowledge_author
+```
+
+Or add to `.env`:
+```bash
+MCP_TOOL_PACKAGE=knowledge_author
+```
+
+### Authentication Methods
+
+The ServiceNow server supports three authentication methods:
+
+#### 1. Basic Authentication (Recommended for Getting Started)
+
+```bash
+SERVICENOW_AUTH_TYPE=basic
+SERVICENOW_USERNAME=your-username
+SERVICENOW_PASSWORD=your-password
+```
+
+#### 2. OAuth Authentication
+
+```bash
+SERVICENOW_AUTH_TYPE=oauth
+SERVICENOW_CLIENT_ID=your-client-id
+SERVICENOW_CLIENT_SECRET=your-client-secret
+SERVICENOW_USERNAME=your-username
+SERVICENOW_PASSWORD=your-password
+SERVICENOW_TOKEN_URL=https://your-instance.service-now.com/oauth_token.do
+```
+
+#### 3. API Key Authentication
+
+```bash
+SERVICENOW_AUTH_TYPE=api_key
+SERVICENOW_API_KEY=your-api-key
+```
+
+---
+
+## Moveworks MCP Server
+
+### Capabilities
+
+The Moveworks MCP server provides **intelligent documentation search** with advanced AI capabilities.
+
+#### Documentation Query Tools (7 tools)
+
+1. **`query_moveworks_docs`** - Real-time documentation crawler
+   - Crawls documentation on-demand
+   - Always returns fresh content
+   - Slower but comprehensive
+   - Best for one-off queries
+
+2. **`index_documentation`** - Build persistent knowledge base
+   - One-time indexing operation
+   - Creates searchable KB with embeddings
+   - Stores at `~/.moveworks_mcp/knowledge_base/`
+   - Enables instant searches
+
+3. **`search_knowledge_base`** - Hybrid search engine
+   - **Multi-query expansion** - Extracts topics and compound terms
+   - **Semantic search** - Understands meaning using ML embeddings
+   - **Keyword matching** - Traditional text search
+   - Lightning-fast with pre-indexed content
+
+4. **`list_knowledge_bases`** - View all indexed KBs
+
+5. **`delete_knowledge_base`** - Remove cached KBs
+
+6. **`list_kb_documents`** - Browse documents in a KB
+
+7. **`get_document_by_url`** - Retrieve specific documentation pages
+
+#### URL Indexing Tools (5 tools)
+
+Index external documentation and resources:
+
+8. **`index_url`** - Index single URL with metadata
+   - Add category, tags, priority
+   - Extract and store content
+   - Generate semantic embeddings
+
+9. **`index_multiple_urls`** - Batch URL indexing
+   - Index multiple URLs at once
+   - Consistent metadata across batches
+
+10. **`list_indexed_content`** - View user-indexed content
+
+11. **`remove_indexed_content`** - Delete indexed URLs
+
+12. **`refresh_all_indexed_content`** - Re-index all user content
+
+### Hybrid Search Engine
+
+The Moveworks server implements a sophisticated **3-stage search pipeline**:
+
+#### Stage 1: Topic Extraction
+```python
+Query: "How do I configure HTTP actions with authentication?"
+
+Extracted Topics:
+- "http action" (compound term)
+- "api authentication" (compound term)
+- "configure"
+- "configure http"
+```
+
+#### Stage 2: Multi-Query Search
+Each extracted topic is searched independently in parallel, then results are merged and deduplicated.
+
+#### Stage 3: Semantic Search
+- Uses `all-MiniLM-L6-v2` model (384-dimensional embeddings)
+- Computes cosine similarity between query and documents
+- Filters results above threshold (default: 0.5)
+- Re-ranks by relevance score
+
+**Result:** Comprehensive, accurate documentation discovery that understands *meaning*, not just keywords.
+
+### Persistent Knowledge Bases
+
+Knowledge bases are stored locally with this structure:
+
+```
+~/.moveworks_mcp/knowledge_base/
+├── {kb_name}/
+│   ├── index.json              # KB metadata & document index
+│   ├── config.json             # KB configuration
+│   ├── docs/                   # Individual documents
+│   │   ├── {doc_id}.json
+│   │   └── ...
+│   └── embeddings/             # Pre-computed vectors
+│       ├── embeddings.json     # Embedding metadata
+│       └── vectors/
+│           ├── {doc_id}.npy    # NumPy arrays
+│           └── ...
+```
+
+**Benefits:**
+- ⚡ Instant search (no crawling delay)
+- 💾 Reduced network traffic
+- 🎯 Consistent results
+- 🔄 Update control via refresh
+
+---
+
+## Installation
+
+### From GitHub
+
+```bash
+# Clone the repository
+git clone https://github.com/KarthikeyanM3011/sn_mcp.git
+cd sn_mcp/sn_mcp
+
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+# macOS/Linux:
+source .venv/bin/activate
+# Windows:
+.venv\Scripts\activate
+
+# Install package with dependencies
+pip install -e .
+```
+
+### Install Semantic Search (Optional but Recommended)
+
+For semantic search capabilities in Moveworks MCP:
+
+```bash
+pip install sentence-transformers
+```
+
+*Note: The Moveworks server will work without this, but semantic search will be disabled.*
+
+### Verify Installation
+
+```bash
+# Check ServiceNow MCP
+servicenow-mcp --help
+
+# Check Moveworks MCP
+moveworks-mcp --help
+
+# Verify SSE servers
+servicenow-mcp-sse --help
+moveworks-mcp-sse --help
+```
+
+---
+
+## Configuration
+
+### Claude Desktop Integration
+
+Add both servers to Claude Desktop configuration:
+
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows:** `%APPDATA%/Claude/claude_desktop_config.json`
 
 ```json
 {
@@ -124,349 +386,525 @@ Edit the configuration file and add this (update the paths to match your setup):
         "SERVICENOW_INSTANCE_URL": "https://your-instance.service-now.com",
         "SERVICENOW_USERNAME": "your-username",
         "SERVICENOW_PASSWORD": "your-password",
-        "SERVICENOW_AUTH_TYPE": "basic"
+        "SERVICENOW_AUTH_TYPE": "basic",
+        "MCP_TOOL_PACKAGE": "full"
+      }
+    },
+    "Moveworks": {
+      "command": "/path/to/your/.venv/bin/python",
+      "args": ["-m", "moveworks_mcp.cli"],
+      "env": {
+        "MOVEWORKS_DOCS_BASE_URL": "https://developer.moveworks.com",
+        "MOVEWORKS_DEBUG": "false"
       }
     }
   }
 }
 ```
 
-> **Finding your Python path:** Run `which python` (macOS/Linux) or `where python` (Windows) while your virtual environment is activated
+**Finding your Python path:**
+```bash
+# While virtual environment is activated:
+which python    # macOS/Linux
+where python    # Windows
+```
 
-**Step 3: Restart Claude Desktop**
+### Environment Variables
 
-Close and reopen Claude Desktop. You should now see ServiceNow tools available!
+#### ServiceNow Server
 
-**Step 4: Try it out**
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SERVICENOW_INSTANCE_URL` | Yes | - | ServiceNow instance URL |
+| `SERVICENOW_AUTH_TYPE` | Yes | - | Auth type: `basic`, `oauth`, or `api_key` |
+| `SERVICENOW_USERNAME` | Conditional | - | Username (basic/oauth) |
+| `SERVICENOW_PASSWORD` | Conditional | - | Password (basic/oauth) |
+| `SERVICENOW_CLIENT_ID` | Conditional | - | OAuth client ID |
+| `SERVICENOW_CLIENT_SECRET` | Conditional | - | OAuth client secret |
+| `SERVICENOW_TOKEN_URL` | Conditional | - | OAuth token endpoint |
+| `SERVICENOW_API_KEY` | Conditional | - | API key |
+| `MCP_TOOL_PACKAGE` | No | `full` | Tool package name |
+| `SERVICENOW_DEBUG` | No | `false` | Enable debug logging |
+| `SERVICENOW_TIMEOUT` | No | `30` | Request timeout (seconds) |
 
-Start a conversation with Claude and try something like:
-> "List all high priority incidents assigned to the Network team"
+#### Moveworks Server
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `MOVEWORKS_DOCS_BASE_URL` | No | `https://developer.moveworks.com` | Base URL for docs |
+| `MOVEWORKS_DEBUG` | No | `false` | Enable debug logging |
+| `MOVEWORKS_TIMEOUT` | No | `30` | Request timeout (seconds) |
 
 ---
 
-## Authentication Methods
+## Usage Examples
 
-Choose the authentication method that works best for your ServiceNow instance:
+### ServiceNow Examples
 
-### Option 1: Basic Authentication (Easiest)
+#### Knowledge Base Management
 
-```bash
-SERVICENOW_AUTH_TYPE=basic
-SERVICENOW_USERNAME=your-username
-SERVICENOW_PASSWORD=your-password
+Ask Claude:
+
+```
+"Create a new knowledge base called 'IT Support' for the IT department"
+
+"Create a category called 'Network Troubleshooting' in the IT Support KB"
+
+"Write a knowledge article about VPN setup in the Network Troubleshooting category"
+
+"Publish the VPN setup article so users can see it"
+
+"List all published articles in the IT Support knowledge base"
 ```
 
-### Option 2: OAuth (More Secure)
+#### Table Operations
 
-```bash
-SERVICENOW_AUTH_TYPE=oauth
-SERVICENOW_CLIENT_ID=your-client-id
-SERVICENOW_CLIENT_SECRET=your-client-secret
-SERVICENOW_TOKEN_URL=https://your-instance.service-now.com/oauth_token.do
+```
+"Show me all available ServiceNow tables"
+
+"Get the schema for the incident table"
+
+"List the last 10 incidents with priority 1"
+
+"Get the full details of incident INC0010001"
+
+"Query the sys_user table for users in the IT department"
 ```
 
-### Option 3: API Key
+### Moveworks Examples
 
-```bash
-SERVICENOW_AUTH_TYPE=api_key
-SERVICENOW_API_KEY=your-api-key
+#### Quick Documentation Query
+
+```
+"What is the Moveworks Creator Studio?"
+
+"How do I create HTTP actions in Moveworks?"
+
+"Explain decision policies in Moveworks workflows"
+```
+
+This will use `query_moveworks_docs` to crawl and return fresh content.
+
+#### Build Persistent Knowledge Base
+
+```
+"Index the Moveworks documentation into a knowledge base called 'moveworks_dev'"
+```
+
+This will:
+1. Crawl the documentation site
+2. Extract and store content
+3. Generate semantic embeddings
+4. Save to `~/.moveworks_mcp/knowledge_base/moveworks_dev/`
+
+#### Fast Hybrid Search
+
+```
+"Search the moveworks_dev knowledge base for information about HTTP actions"
+
+"Find documentation about authentication in the moveworks_dev KB"
+```
+
+Uses the 3-stage hybrid search engine for instant, accurate results.
+
+#### Index External URLs
+
+```
+"Index this URL with category 'API' and tags 'rest, authentication':
+https://example.com/api-docs"
+
+"Index multiple URLs from our internal documentation site:
+- https://internal.example.com/api/rest
+- https://internal.example.com/api/webhooks
+- https://internal.example.com/api/oauth"
+```
+
+#### Manage Knowledge Bases
+
+```
+"List all my knowledge bases"
+
+"Show me all documents in the moveworks_dev knowledge base"
+
+"Delete the old_documentation knowledge base"
+
+"Refresh all indexed content to get the latest versions"
 ```
 
 ---
 
-## Advanced Usage
+## Deployment Options
 
-### Running as a Standalone Server (SSE Mode)
+### Option 1: Claude Desktop (stdio)
 
-For advanced integrations, you can run the MCP server as a web service using Server-Sent Events:
+Best for: Individual developers using Claude Desktop
+
+**Configuration:** See [Claude Desktop Integration](#claude-desktop-integration) above
+
+### Option 2: SSE Server (HTTP)
+
+Best for: Web applications, custom integrations, shared access
+
+#### Start ServiceNow SSE Server
 
 ```bash
-servicenow-mcp-sse --instance-url=https://your-instance.service-now.com \
-                   --username=your-username \
-                   --password=your-password
+servicenow-mcp-sse \
+  --host 0.0.0.0 \
+  --port 8080 \
+  --instance-url https://your-instance.service-now.com \
+  --username your-username \
+  --password your-password \
+  --auth-type basic
 ```
 
-**Custom host and port:**
+#### Start Moveworks SSE Server
+
 ```bash
-servicenow-mcp-sse --host=127.0.0.1 --port=8000
+moveworks-mcp-sse \
+  --host 0.0.0.0 \
+  --port 8001 \
+  --docs-base-url https://developer.moveworks.com
 ```
 
-The server exposes two endpoints:
+#### SSE Endpoints
+
+Both servers expose:
 - `/sse` - SSE connection endpoint
 - `/messages/` - Message sending endpoint
 
-**Example Python code:**
+### Option 3: Docker (Coming Soon)
+
+```bash
+# Build image
+docker build -t sn-moveworks-mcp .
+
+# Run ServiceNow container
+docker run -d \
+  -e SERVICENOW_INSTANCE_URL=https://your-instance.service-now.com \
+  -e SERVICENOW_USERNAME=your-username \
+  -e SERVICENOW_PASSWORD=your-password \
+  -e SERVICENOW_AUTH_TYPE=basic \
+  -p 8080:8080 \
+  sn-moveworks-mcp servicenow-mcp-sse
+```
+
+---
+
+## Advanced Features
+
+### Custom Tool Packages
+
+Create custom tool combinations by editing `config/tool_packages.yaml`:
+
+```yaml
+# Custom package for KB authors who also need table access
+kb_with_tables:
+  - create_knowledge_base
+  - list_knowledge_bases
+  - create_category
+  - create_article
+  - update_article
+  - publish_article
+  - list_articles
+  - get_article
+  - list_tables
+  - list_records
+
+# Custom package for read-only access
+read_only:
+  - list_knowledge_bases
+  - list_articles
+  - get_article
+  - list_tables
+  - get_table
+  - list_records
+  - get_record
+```
+
+Then use:
+```bash
+export MCP_TOOL_PACKAGE=kb_with_tables
+```
+
+### Semantic Search Tuning
+
+Adjust semantic search sensitivity by modifying the threshold in your code:
+
 ```python
-from servicenow_mcp.server import ServiceNowMCP
-from servicenow_mcp.server_sse import create_starlette_app
-from servicenow_mcp.utils.config import ServerConfig, AuthConfig, AuthType, BasicAuthConfig
-import uvicorn
-
-config = ServerConfig(
-    instance_url="https://your-instance.service-now.com",
-    auth=AuthConfig(
-        type=AuthType.BASIC,
-        config=BasicAuthConfig(
-            username="your-username",
-            password="your-password"
-        )
-    ),
-    debug=True
+# In kb_search.py or your custom implementation
+semantic_engine = SemanticSearchEngine(
+    similarity_threshold=0.5  # Default
+    # Try 0.3 for broader matches
+    # Try 0.7 for stricter matches
 )
-
-servicenow_mcp = ServiceNowMCP(config)
-app = create_starlette_app(servicenow_mcp, debug=True)
-uvicorn.run(app, host="0.0.0.0", port=8080)
 ```
 
-See `examples/sse_server_example.py` for a complete example.
+### Batch URL Indexing
 
----
-
-## Tool Packages (Role-Based Access)
-
-By default, this server provides **all available tools** to Claude. However, you can limit which tools are available based on specific roles or use cases.
-
-### Why Use Tool Packages?
-
-- **Simplify the experience** - Only show tools relevant to a specific role
-- **Reduce token usage** - Fewer tools means less context for Claude to process
-- **Improve focus** - Help Claude choose the right tools faster
-
-### How to Use
-
-Set the `MCP_TOOL_PACKAGE` environment variable to choose a package:
-
-```bash
-export MCP_TOOL_PACKAGE=service_desk
+Create a file `urls.txt`:
+```
+https://docs.example.com/api/rest
+https://docs.example.com/api/webhooks
+https://docs.example.com/api/oauth
+https://docs.example.com/guides/quickstart
 ```
 
-Or add it to your `.env` file:
-```bash
-MCP_TOOL_PACKAGE=service_desk
+Then ask Claude:
+```
+"Index all URLs from my urls.txt file with category 'API Documentation'"
 ```
 
-### Available Packages
+### Knowledge Base Refresh Strategies
 
-| Package | Best For | What's Included |
-|---------|----------|----------------|
-| `full` | Everyone (default) | All available tools |
-| `service_desk` | Help desk agents | Incident management, user lookup, knowledge articles |
-| `catalog_builder` | Catalog administrators | Catalog items, categories, variables, UI policies |
-| `change_coordinator` | Change managers | Change requests, tasks, approvals |
-| `knowledge_author` | Knowledge managers | Knowledge bases, categories, articles |
-| `platform_developer` | Developers | Script includes, workflows, changesets |
-| `system_administrator` | System admins | User/group management, system logs |
-| `agile_management` | Scrum teams | User stories, epics, scrum tasks, projects |
-| `none` | Testing | No tools (except `list_tool_packages`) |
-
-### Customizing Packages
-
-You can create your own custom packages by editing `config/tool_packages.yaml`. The file uses a simple YAML format where you define which tools belong to each package.
-
-### Finding Available Packages
-
-Claude can list all available packages for you. Just ask:
-> "What tool packages are available?"
-
----
-
-## What Can You Do With This?
-
-Instead of listing all 80+ tools, here are real-world examples of what you can accomplish:
-
-### 🎫 Incident Management
-Ask Claude things like:
-- *"Create a new incident for a network outage in the east region"*
-- *"Update incident INC0010001 to high priority"*
-- *"Add a comment to incident INC0010001 saying we're investigating"*
-- *"Resolve incident INC0010001 - the server was restarted"*
-- *"Show me all P1 incidents assigned to the Network team"*
-
-### 📦 Service Catalog
-- *"List all items in the service catalog"*
-- *"Create a new category called 'Cloud Services'"*
-- *"Move the laptop request item to the Hardware category"*
-- *"Add a dropdown field for laptop models to the laptop request form"*
-- *"Analyze our service catalog and suggest improvements"*
-
-### 🔄 Change Management
-- *"Create a change request for server maintenance tomorrow night"*
-- *"Add a pre-implementation checklist task to the maintenance change"*
-- *"Submit the server maintenance change for approval"*
-- *"Show me all emergency changes scheduled this week"*
-- *"Approve change CHG0012345 with comment 'Looks good to proceed'"*
-
-### 📚 Knowledge Management
-- *"Create a knowledge base for the IT department"*
-- *"Create a category called 'Network Troubleshooting'"*
-- *"Write an article about VPN setup in the Network category"*
-- *"Publish the VPN article so users can see it"*
-- *"Find all articles about password reset"*
-
-### 👥 User & Group Management
-- *"Create a new user Alice in the Radiology department"*
-- *"Add the ITIL role to Bob's account"*
-- *"Create a group called 'Biomedical Engineering'"*
-- *"Add Alice and Bob to the Biomedical Engineering group"*
-- *"List all users in the IT department"*
-
-### 📋 Agile Management
-- *"Create a user story for implementing a new reporting dashboard"*
-- *"Create an epic called 'Data Analytics Initiatives'"*
-- *"List all user stories assigned to the Data team"*
-- *"Create a scrum task for the reporting dashboard story"*
-- *"Mark the data extraction task as completed"*
-
-### ⚙️ Advanced Development
-- *"Show me all active workflows in ServiceNow"*
-- *"Create a workflow for handling software license requests"*
-- *"List all script includes in the system"*
-- *"Create a changeset for the HR Portal application"*
-- *"Create a UI policy that shows justification when cost > $100"*
-
-<details>
-<summary><b>📋 Complete Tool List (Click to expand)</b></summary>
-
-### Incident Management (5 tools)
-- `create_incident`, `update_incident`, `add_comment`, `resolve_incident`, `list_incidents`
-
-### Service Catalog (12 tools)
-- `list_catalog_items`, `get_catalog_item`, `update_catalog_item`
-- `list_catalog_categories`, `create_catalog_category`, `update_catalog_category`
-- `move_catalog_items`, `list_catalogs`
-- `create_catalog_item_variable`, `list_catalog_item_variables`, `update_catalog_item_variable`
-- `get_optimization_recommendations`
-
-### Change Management (8 tools)
-- `create_change_request`, `update_change_request`, `list_change_requests`
-- `get_change_request_details`, `add_change_task`
-- `submit_change_for_approval`, `approve_change`, `reject_change`
-
-### Agile Management (11 tools)
-- **Stories:** `create_story`, `update_story`, `list_stories`, `create_story_dependency`, `delete_story_dependency`
-- **Epics:** `create_epic`, `update_epic`, `list_epics`
-- **Tasks:** `create_scrum_task`, `update_scrum_task`, `list_scrum_tasks`
-- **Projects:** `create_project`, `update_project`, `list_projects`
-
-### Knowledge Base (8 tools)
-- `create_knowledge_base`, `list_knowledge_bases`
-- `create_category`, `create_article`, `update_article`, `publish_article`
-- `list_articles`, `get_article`
-
-### User Management (9 tools)
-- `create_user`, `update_user`, `get_user`, `list_users`
-- `create_group`, `update_group`, `list_groups`
-- `add_group_members`, `remove_group_members`
-
-### Workflow Management (5 tools)
-- `list_workflows`, `get_workflow`, `create_workflow`, `update_workflow`, `delete_workflow`
-
-### Script Includes (5 tools)
-- `list_script_includes`, `get_script_include`, `create_script_include`
-- `update_script_include`, `delete_script_include`
-
-### Changeset Management (7 tools)
-- `list_changesets`, `get_changeset_details`, `create_changeset`, `update_changeset`
-- `commit_changeset`, `publish_changeset`, `add_file_to_changeset`
-
-### UI Policies (2 tools)
-- `create_ui_policy`, `create_ui_policy_action`
-
-**Total: 80+ tools across all categories**
-
-</details>
-
----
-
-## Alternative: Using MCP CLI
-
-If you have the MCP CLI installed, you can register the server with one command:
-
-```bash
-mcp install src/servicenow_mcp/server.py -f .env
+**Full Refresh:**
+```
+"Refresh all indexed content in the moveworks_dev knowledge base"
 ```
 
-This automatically registers the ServiceNow MCP server with Claude using your `.env` file configuration.
+**Selective Refresh:**
+```
+"Re-index only the authentication documentation in moveworks_dev"
+```
 
 ---
 
 ## Troubleshooting
 
-### Connection Issues
+### ServiceNow Connection Issues
 
-**Problem:** Claude can't connect to ServiceNow
-- ✅ Verify your instance URL is correct (should start with `https://`)
-- ✅ Check your username and password are correct
-- ✅ Ensure your ServiceNow account has API access enabled
-- ✅ Try testing your credentials directly in a browser
+**Problem:** `Authentication failed` error
 
-**Problem:** "Authentication failed" error
-- ✅ Verify `SERVICENOW_AUTH_TYPE` matches your credential type (`basic`, `oauth`, or `api_key`)
-- ✅ For OAuth, ensure your client ID and secret are correct
-- ✅ Check that your password doesn't have special characters that need escaping
+✅ **Solutions:**
+- Verify `SERVICENOW_AUTH_TYPE` matches your credential type
+- Check username and password are correct
+- Ensure your ServiceNow account has API access enabled
+- For OAuth, verify client ID and secret
+- Check that password doesn't contain unescaped special characters
 
-### Server Issues
+**Problem:** `Instance URL not found`
 
-**Problem:** Server won't start
-- ✅ Ensure Python 3.11+ is installed: `python --version`
-- ✅ Verify virtual environment is activated (you should see `.venv` in your prompt)
-- ✅ Try reinstalling: `pip install -e . --force-reinstall`
+✅ **Solutions:**
+- Ensure URL starts with `https://`
+- Remove trailing slashes from URL
+- Verify instance is accessible in browser
+- Check for typos in instance name
+
+### Moveworks Search Issues
+
+**Problem:** Semantic search not working
+
+✅ **Solutions:**
+```bash
+# Install sentence-transformers
+pip install sentence-transformers
+
+# Verify installation
+python -c "from sentence_transformers import SentenceTransformer; print('OK')"
+```
+
+**Problem:** Knowledge base creation fails
+
+✅ **Solutions:**
+- Check disk space in `~/.moveworks_mcp/`
+- Verify write permissions
+- Try a different KB name (avoid special characters)
+- Check network connectivity to documentation site
+
+**Problem:** Search returns no results
+
+✅ **Solutions:**
+- Verify KB was indexed successfully: `"List all documents in {kb_name}"`
+- Try broader search terms
+- Check if documentation site structure changed
+- Re-index the knowledge base
+
+### Performance Issues
+
+**Problem:** Slow search performance
+
+✅ **Solutions:**
+- Use indexed KBs instead of real-time crawling
+- Enable semantic search for better relevance
+- Reduce `max_pages` parameter
+- Use tool packages to limit available tools
+
+**Problem:** High memory usage
+
+✅ **Solutions:**
+- Delete unused knowledge bases
+- Reduce number of indexed documents
+- Use streaming for large queries
+- Restart MCP servers periodically
+
+### Claude Desktop Integration
 
 **Problem:** Tools not appearing in Claude
-- ✅ Restart Claude Desktop after configuration changes
-- ✅ Check the path to Python in your config file is correct
-- ✅ Look for errors in Claude Desktop logs
 
-### Getting Help
+✅ **Solutions:**
+- Restart Claude Desktop after config changes
+- Verify Python path in config is correct: `which python` (with venv active)
+- Check config JSON syntax is valid
+- Look for errors in Claude Desktop logs:
+  - macOS: `~/Library/Logs/Claude/`
+  - Windows: `%APPDATA%\Claude\logs\`
 
-If you're still stuck:
-1. Check the [GitHub Issues](https://github.com/echelon-ai-labs/servicenow-mcp/issues) for similar problems
-2. Enable debug mode by adding `"debug": true` to your config
-3. Review the detailed documentation in the [`docs`](docs/) directory
+**Problem:** Environment variables not working
+
+✅ **Solutions:**
+- Ensure `.env` file is in the correct directory
+- Check for typos in variable names
+- Verify no extra spaces around `=` signs
+- Use absolute paths, not relative paths
+
+### Debug Mode
+
+Enable detailed logging:
+
+```bash
+# ServiceNow
+export SERVICENOW_DEBUG=true
+
+# Moveworks
+export MOVEWORKS_DEBUG=true
+```
+
+Or add to `.env`:
+```bash
+SERVICENOW_DEBUG=true
+MOVEWORKS_DEBUG=true
+```
 
 ---
 
-## Example Scripts
+## Project Structure
 
-The repository includes working example scripts to help you get started:
-
-| Script | What It Does |
-|--------|-------------|
-| [`examples/catalog_optimization_example.py`](examples/catalog_optimization_example.py) | Analyzes and suggests improvements for your service catalog |
-| [`examples/change_management_demo.py`](examples/change_management_demo.py) | Demonstrates creating and managing change requests |
-| [`examples/sse_server_example.py`](examples/sse_server_example.py) | Shows how to run the server in SSE mode |
+```
+sn_mcp/
+├── config/
+│   └── tool_packages.yaml          # Tool package definitions
+├── src/
+│   ├── servicenow_mcp/
+│   │   ├── cli.py                  # ServiceNow CLI entry point
+│   │   ├── server.py               # ServiceNow MCP server
+│   │   ├── server_sse.py           # ServiceNow SSE server
+│   │   ├── auth/
+│   │   │   └── auth_manager.py     # Multi-method authentication
+│   │   ├── tools/
+│   │   │   ├── kb_tools.py         # Knowledge base operations
+│   │   │   └── table_tools.py      # Table operations
+│   │   └── utils/
+│   │       ├── config.py           # Configuration models
+│   │       └── tool_utils.py       # Tool registry
+│   └── moveworks_mcp/
+│       ├── cli.py                  # Moveworks CLI entry point
+│       ├── server.py               # Moveworks MCP server
+│       ├── server_sse.py           # Moveworks SSE server
+│       ├── auth/
+│       │   └── auth_manager.py     # Minimal auth (public docs)
+│       ├── tools/
+│       │   ├── docs_crawler.py     # Intelligent documentation crawler
+│       │   ├── kb_search.py        # Hybrid search engine
+│       │   ├── knowledge_base_manager.py  # KB persistence
+│       │   ├── indexer.py          # URL indexing
+│       │   ├── embedding_cache.py  # Vector storage
+│       │   └── documentation_tools.py  # Query tools
+│       └── utils/
+│           ├── config.py           # Configuration models
+│           └── tool_utils.py       # Tool registry
+├── .env.example                    # Environment template
+├── pyproject.toml                  # Project metadata & dependencies
+├── README.md                       # This file
+└── LICENSE                         # MIT License
+```
 
 ---
 
-## Additional Documentation
+## Dependencies
 
-Detailed guides are available in the [`docs`](docs/) directory:
+### Core Dependencies
 
-- 📦 [**Catalog Integration**](docs/catalog.md) - Deep dive into Service Catalog features
-- 🔄 [**Change Management**](docs/change_management.md) - Complete guide to change request handling
-- ⚙️ [**Workflow Management**](docs/workflow_management.md) - Building and managing workflows
-- 📋 [**Changeset Management**](docs/changeset_management.md) - Deployment and version control
-- 🎯 [**Catalog Optimization**](docs/catalog_optimization_plan.md) - Strategies for improving your catalog
+- **mcp[cli]==1.3.0** - Model Context Protocol SDK
+- **requests>=2.28.0** - HTTP client for ServiceNow API
+- **pydantic>=2.0.0** - Data validation and configuration
+- **python-dotenv>=1.0.0** - Environment variable management
+
+### Web & Server
+
+- **starlette>=0.27.0** - ASGI framework for SSE server
+- **uvicorn>=0.22.0** - ASGI server
+- **httpx>=0.24.0** - Async HTTP client
+
+### Documentation & Search
+
+- **beautifulsoup4>=4.12.0** - HTML parsing and extraction
+- **PyYAML>=6.0** - Configuration file parsing
+- **sentence-transformers>=2.2.0** - Semantic search embeddings
+- **numpy>=1.24.0** - Vector operations and storage
+
+### Development Dependencies
+
+- **pytest>=7.0.0** - Testing framework
+- **pytest-cov>=4.0.0** - Code coverage
+- **black>=23.0.0** - Code formatting
+- **isort>=5.12.0** - Import sorting
+- **mypy>=1.0.0** - Type checking
+- **ruff>=0.0.1** - Fast Python linter
 
 ---
 
 ## Contributing
 
-We welcome contributions! Here's how to get involved:
+Contributions are welcome! Here's how to get started:
+
+### Development Setup
+
+```bash
+# Clone repository
+git clone https://github.com/KarthikeyanM3011/sn_mcp.git
+cd sn_mcp/sn_mcp
+
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate
+
+# Install with dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Format code
+black src/
+isort src/
+
+# Type check
+mypy src/
+
+# Lint
+ruff check src/
+```
+
+### Contribution Guidelines
 
 1. **Fork** the repository
 2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
-3. **Commit** your changes: `git commit -m 'Add amazing feature'`
-4. **Push** to your branch: `git push origin feature/amazing-feature`
-5. **Open** a Pull Request
+3. **Make** your changes with tests
+4. **Format** code: `black src/ && isort src/`
+5. **Test**: `pytest`
+6. **Commit**: `git commit -m 'Add amazing feature'`
+7. **Push**: `git push origin feature/amazing-feature`
+8. **Open** a Pull Request
 
-### Contribution Ideas
-- Add new tools for ServiceNow modules
-- Improve error handling and validation
-- Add more example scripts
-- Enhance documentation
-- Report bugs or suggest features
+### Ideas for Contributions
+
+- 🔧 Add new ServiceNow tools (incidents, changes, catalog items)
+- 🌐 Support additional documentation sites
+- 🎨 Improve search relevance algorithms
+- 📊 Add analytics and metrics
+- 🐳 Create Docker deployment examples
+- 📖 Improve documentation
+- 🐛 Fix bugs and improve error handling
+- ⚡ Performance optimizations
 
 ---
 
@@ -476,13 +914,68 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ---
 
-## Support & Community
+## Acknowledgments
 
-- 🐛 **Report Bugs:** [GitHub Issues](https://github.com/echelon-ai-labs/servicenow-mcp/issues)
-- 💡 **Feature Requests:** [GitHub Discussions](https://github.com/echelon-ai-labs/servicenow-mcp/discussions)
-- 📖 **Documentation:** [docs/](docs/) directory
-- ⭐ **Star us on GitHub** if you find this helpful!
+- Built on the [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol) by Anthropic
+- Semantic search powered by [sentence-transformers](https://www.sbert.net/)
+- Documentation crawling with [BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/)
 
 ---
 
-Made with ❤️ by the ServiceNow MCP community
+## Support & Community
+
+- 🐛 **Report Issues:** [GitHub Issues](https://github.com/KarthikeyanM3011/sn_mcp/issues)
+- 💡 **Feature Requests:** [GitHub Discussions](https://github.com/KarthikeyanM3011/sn_mcp/discussions)
+- ⭐ **Star this repo** if you find it helpful!
+- 🔀 **Fork and extend** for your own use cases
+
+---
+
+## What's Next?
+
+### Roadmap
+
+- [ ] **Additional ServiceNow Tools**
+  - Incident management (create, update, resolve)
+  - Change request workflows
+  - Service catalog integration
+  - User and group management
+
+- [ ] **Enhanced Search**
+  - Multi-language support
+  - Query auto-complete
+  - Search result ranking improvements
+  - Fuzzy matching
+
+- [ ] **Developer Experience**
+  - Docker Compose setup
+  - Kubernetes deployment examples
+  - Web UI for KB management
+  - Interactive documentation
+
+- [ ] **Performance**
+  - Incremental indexing
+  - Parallel crawling
+  - Caching improvements
+  - Connection pooling
+
+---
+
+## Getting Help
+
+If you encounter issues:
+
+1. Check the [Troubleshooting](#troubleshooting) section
+2. Search [existing issues](https://github.com/KarthikeyanM3011/sn_mcp/issues)
+3. Enable debug mode and check logs
+4. Open a new issue with:
+   - Your environment (OS, Python version)
+   - Steps to reproduce
+   - Error messages
+   - Configuration (sanitized)
+
+---
+
+**Made with ❤️ for the Claude AI and MCP community**
+
+*Empowering AI assistants with enterprise integrations and intelligent documentation search*
