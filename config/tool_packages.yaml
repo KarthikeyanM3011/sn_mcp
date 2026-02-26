@@ -17,21 +17,6 @@ table_explorer:
   - list_records
   - get_record
 
-topic_extractor:
-  - extract_topic
-  - list_tables
-  - get_table
-  - list_records
-  - get_record
-
-flow_mapper:
-  - extract_topic
-  - map_flow_to_moveworks
-  - list_tables
-  - get_table
-  - list_records
-  - get_record
-
 full:
   - create_knowledge_base
   - list_knowledge_bases
@@ -46,5 +31,3 @@ full:
   - get_table
   - list_records
   - get_record
-  - extract_topic
-  - map_flow_to_moveworks

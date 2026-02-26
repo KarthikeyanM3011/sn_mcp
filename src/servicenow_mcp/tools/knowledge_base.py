@@ -1,9 +1,3 @@
-"""
-Knowledge base tools for the ServiceNow MCP server.
-
-This module provides tools for managing knowledge bases, categories, and articles in ServiceNow.
-"""
-
 import logging
 from typing import Any, Dict, Optional
 
@@ -17,8 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class CreateKnowledgeBaseParams(BaseModel):
-    """Parameters for creating a knowledge base."""
-
     title: str = Field(..., description="Title of the knowledge base")
     description: Optional[str] = Field(None, description="Description of the knowledge base")
     owner: Optional[str] = Field(None, description="The specified admin user or group")
@@ -28,8 +20,6 @@ class CreateKnowledgeBaseParams(BaseModel):
 
 
 class ListKnowledgeBasesParams(BaseModel):
-    """Parameters for listing knowledge bases."""
-    
     limit: int = Field(10, description="Maximum number of knowledge bases to return")
     offset: int = Field(0, description="Offset for pagination")
     active: Optional[bool] = Field(None, description="Filter by active status")
@@ -37,8 +27,6 @@ class ListKnowledgeBasesParams(BaseModel):
 
 
 class CreateCategoryParams(BaseModel):
-    """Parameters for creating a category in a knowledge base."""
-
     title: str = Field(..., description="Title of the category")
     description: Optional[str] = Field(None, description="Description of the category")
     knowledge_base: str = Field(..., description="The knowledge base to create the category in")
@@ -48,8 +36,6 @@ class CreateCategoryParams(BaseModel):
 
 
 class CreateArticleParams(BaseModel):
-    """Parameters for creating a knowledge article."""
-
     title: str = Field(..., description="Title of the article")
     text: str = Field(..., description="The main body text for the article. Field supports html formatting and wiki markup based on the article_type. HTML is the default.")
     short_description: str = Field(..., description="Short description of the article")
@@ -60,8 +46,6 @@ class CreateArticleParams(BaseModel):
 
 
 class UpdateArticleParams(BaseModel):
-    """Parameters for updating a knowledge article."""
-
     article_id: str = Field(..., description="ID of the article to update")
     title: Optional[str] = Field(None, description="Updated title of the article")
     text: Optional[str] = Field(None, description="Updated main body text for the article. Field supports html formatting and wiki markup based on the article_type. HTML is the default.")
@@ -71,16 +55,12 @@ class UpdateArticleParams(BaseModel):
 
 
 class PublishArticleParams(BaseModel):
-    """Parameters for publishing a knowledge article."""
-
     article_id: str = Field(..., description="ID of the article to publish")
     workflow_state: Optional[str] = Field("published", description="The workflow state to set")
     workflow_version: Optional[str] = Field(None, description="The workflow version to use")
 
 
 class ListArticlesParams(BaseModel):
-    """Parameters for listing knowledge articles."""
-    
     limit: int = Field(10, description="Maximum number of articles to return")
     offset: int = Field(0, description="Offset for pagination")
     knowledge_base: Optional[str] = Field(None, description="Filter by knowledge base")
@@ -90,14 +70,10 @@ class ListArticlesParams(BaseModel):
 
 
 class GetArticleParams(BaseModel):
-    """Parameters for getting a knowledge article."""
-
     article_id: str = Field(..., description="ID of the article to get")
 
 
 class KnowledgeBaseResponse(BaseModel):
-    """Response from knowledge base operations."""
-
     success: bool = Field(..., description="Whether the operation was successful")
     message: str = Field(..., description="Message describing the result")
     kb_id: Optional[str] = Field(None, description="ID of the affected knowledge base")
@@ -105,8 +81,6 @@ class KnowledgeBaseResponse(BaseModel):
 
 
 class CategoryResponse(BaseModel):
-    """Response from category operations."""
-
     success: bool = Field(..., description="Whether the operation was successful")
     message: str = Field(..., description="Message describing the result")
     category_id: Optional[str] = Field(None, description="ID of the affected category")
@@ -114,8 +88,6 @@ class CategoryResponse(BaseModel):
 
 
 class ArticleResponse(BaseModel):
-    """Response from article operations."""
-
     success: bool = Field(..., description="Whether the operation was successful")
     message: str = Field(..., description="Message describing the result")
     article_id: Optional[str] = Field(None, description="ID of the affected article")
@@ -124,8 +96,6 @@ class ArticleResponse(BaseModel):
 
 
 class ListCategoriesParams(BaseModel):
-    """Parameters for listing categories in a knowledge base."""
-    
     knowledge_base: Optional[str] = Field(None, description="Filter by knowledge base ID")
     parent_category: Optional[str] = Field(None, description="Filter by parent category ID")
     limit: int = Field(10, description="Maximum number of categories to return")
@@ -139,20 +109,9 @@ def create_knowledge_base(
     auth_manager: AuthManager,
     params: CreateKnowledgeBaseParams,
 ) -> KnowledgeBaseResponse:
-    """
-    Create a new knowledge base in ServiceNow.
 
-    Args:
-        config: Server configuration.
-        auth_manager: Authentication manager.
-        params: Parameters for creating the knowledge base.
-
-    Returns:
-        Response with the created knowledge base details.
-    """
     api_url = f"{config.api_url}/table/kb_knowledge_base"
 
-    # Build request data
     data = {
         "title": params.title,
     }
@@ -168,7 +127,6 @@ def create_knowledge_base(
     if params.retire_workflow:
         data["workflow_retire"] = params.retire_workflow
 
-    # Make request
     try:
         response = requests.post(
             api_url,
@@ -200,27 +158,14 @@ def list_knowledge_bases(
     auth_manager: AuthManager,
     params: ListKnowledgeBasesParams,
 ) -> Dict[str, Any]:
-    """
-    List knowledge bases with filtering options.
-
-    Args:
-        config: Server configuration.
-        auth_manager: Authentication manager.
-        params: Parameters for listing knowledge bases.
-
-    Returns:
-        Dictionary with list of knowledge bases and metadata.
-    """
     api_url = f"{config.api_url}/table/kb_knowledge_base"
 
-    # Build query parameters
     query_params = {
         "sysparm_limit": params.limit,
         "sysparm_offset": params.offset,
         "sysparm_display_value": "true",
     }
 
-    # Build query string
     query_parts = []
     if params.active is not None:
         query_parts.append(f"active={str(params.active).lower()}")
@@ -230,7 +175,6 @@ def list_knowledge_bases(
     if query_parts:
         query_params["sysparm_query"] = "^".join(query_parts)
 
-    # Make request
     try:
         response = requests.get(
             api_url,
@@ -240,10 +184,8 @@ def list_knowledge_bases(
         )
         response.raise_for_status()
 
-        # Get the JSON response 
         json_response = response.json()
-        
-        # Safely extract the result
+
         if isinstance(json_response, dict) and "result" in json_response:
             result = json_response.get("result", [])
         else:
@@ -257,22 +199,18 @@ def list_knowledge_bases(
                 "offset": params.offset,
             }
 
-        # Transform the results - create a simpler structure
         knowledge_bases = []
-        
-        # Handle either string or list
+
         if isinstance(result, list):
             for kb_item in result:
                 if not isinstance(kb_item, dict):
                     logger.warning("Skipping non-dictionary KB item: %s", kb_item)
                     continue
-                    
-                # Safely extract values
+
                 kb_id = kb_item.get("sys_id", "")
                 title = kb_item.get("title", "")
                 description = kb_item.get("description", "")
-                
-                # Extract nested values safely
+
                 owner = ""
                 if isinstance(kb_item.get("owner"), dict):
                     owner = kb_item["owner"].get("display_value", "")
@@ -327,24 +265,12 @@ def create_category(
     auth_manager: AuthManager,
     params: CreateCategoryParams,
 ) -> CategoryResponse:
-    """
-    Create a new category in a knowledge base.
 
-    Args:
-        config: Server configuration.
-        auth_manager: Authentication manager.
-        params: Parameters for creating the category.
-
-    Returns:
-        Response with the created category details.
-    """
     api_url = f"{config.api_url}/table/kb_category"
 
-    # Build request data
     data = {
         "label": params.title,
         "kb_knowledge_base": params.knowledge_base,
-        # Convert boolean to string "true"/"false" as ServiceNow expects
         "active": str(params.active).lower(),
     }
 
@@ -354,11 +280,9 @@ def create_category(
         data["parent"] = params.parent_category
     if params.parent_table:
         data["parent_table"] = params.parent_table
-    
-    # Log the request data for debugging
+
     logger.debug(f"Creating category with data: {data}")
 
-    # Make request
     try:
         response = requests.post(
             api_url,
@@ -371,14 +295,12 @@ def create_category(
         result = response.json().get("result", {})
         logger.debug(f"Category creation response: {result}")
 
-        # Log the specific fields to check the knowledge base assignment
         if "kb_knowledge_base" in result:
             logger.debug(f"Knowledge base in response: {result['kb_knowledge_base']}")
-        
-        # Log the active status
+
         if "active" in result:
             logger.debug(f"Active status in response: {result['active']}")
-        
+
         return CategoryResponse(
             success=True,
             message="Category created successfully",
@@ -399,20 +321,9 @@ def create_article(
     auth_manager: AuthManager,
     params: CreateArticleParams,
 ) -> ArticleResponse:
-    """
-    Create a new knowledge article.
 
-    Args:
-        config: Server configuration.
-        auth_manager: Authentication manager.
-        params: Parameters for creating the article.
-
-    Returns:
-        Response with the created article details.
-    """
     api_url = f"{config.api_url}/table/kb_knowledge"
 
-    # Build request data
     data = {
         "short_description": params.short_description,
         "text": params.text,
@@ -426,7 +337,6 @@ def create_article(
     if params.keywords:
         data["keywords"] = params.keywords
 
-    # Make request
     try:
         response = requests.post(
             api_url,
@@ -459,20 +369,9 @@ def update_article(
     auth_manager: AuthManager,
     params: UpdateArticleParams,
 ) -> ArticleResponse:
-    """
-    Update an existing knowledge article.
 
-    Args:
-        config: Server configuration.
-        auth_manager: Authentication manager.
-        params: Parameters for updating the article.
-
-    Returns:
-        Response with the updated article details.
-    """
     api_url = f"{config.api_url}/table/kb_knowledge/{params.article_id}"
 
-    # Build request data
     data = {}
 
     if params.title:
@@ -486,7 +385,6 @@ def update_article(
     if params.keywords:
         data["keywords"] = params.keywords
 
-    # Make request
     try:
         response = requests.patch(
             api_url,
@@ -519,20 +417,9 @@ def publish_article(
     auth_manager: AuthManager,
     params: PublishArticleParams,
 ) -> ArticleResponse:
-    """
-    Publish a knowledge article.
 
-    Args:
-        config: Server configuration.
-        auth_manager: Authentication manager.
-        params: Parameters for publishing the article.
-
-    Returns:
-        Response with the published article details.
-    """
     api_url = f"{config.api_url}/table/kb_knowledge/{params.article_id}"
 
-    # Build request data
     data = {
         "workflow_state": params.workflow_state,
     }
@@ -540,7 +427,6 @@ def publish_article(
     if params.workflow_version:
         data["workflow_version"] = params.workflow_version
 
-    # Make request
     try:
         response = requests.patch(
             api_url,
@@ -573,27 +459,15 @@ def list_articles(
     auth_manager: AuthManager,
     params: ListArticlesParams,
 ) -> Dict[str, Any]:
-    """
-    List knowledge articles with filtering options.
 
-    Args:
-        config: Server configuration.
-        auth_manager: Authentication manager.
-        params: Parameters for listing articles.
-
-    Returns:
-        Dictionary with list of articles and metadata.
-    """
     api_url = f"{config.api_url}/table/kb_knowledge"
 
-    # Build query parameters
     query_params = {
         "sysparm_limit": params.limit,
         "sysparm_offset": params.offset,
         "sysparm_display_value": "all",
     }
 
-    # Build query string
     query_parts = []
     if params.knowledge_base:
         query_parts.append(f"kb_knowledge_base.sys_id={params.knowledge_base}")
@@ -609,10 +483,8 @@ def list_articles(
         logger.debug(f"Constructed article query string: {query_string}")
         query_params["sysparm_query"] = query_string
     
-    # Log the query parameters for debugging
     logger.debug(f"Listing articles with query params: {query_params}")
 
-    # Make request
     try:
         response = requests.get(
             api_url,
@@ -622,11 +494,9 @@ def list_articles(
         )
         response.raise_for_status()
 
-        # Get the JSON response
         json_response = response.json()
         logger.debug(f"Article listing raw response: {json_response}")
         
-        # Safely extract the result
         if isinstance(json_response, dict) and "result" in json_response:
             result = json_response.get("result", [])
         else:
@@ -640,21 +510,17 @@ def list_articles(
                 "offset": params.offset,
             }
 
-        # Transform the results
         articles = []
         
-        # Handle either string or list
         if isinstance(result, list):
             for article_item in result:
                 if not isinstance(article_item, dict):
                     logger.warning("Skipping non-dictionary article item: %s", article_item)
                     continue
                     
-                # Safely extract values
                 article_id = article_item.get("sys_id", "")
                 title = article_item.get("short_description", "")
                 
-                # Extract nested values safely
                 knowledge_base = ""
                 if isinstance(article_item.get("kb_knowledge_base"), dict):
                     knowledge_base = article_item["kb_knowledge_base"].get("display_value", "")
@@ -708,25 +574,13 @@ def get_article(
     auth_manager: AuthManager,
     params: GetArticleParams,
 ) -> Dict[str, Any]:
-    """
-    Get a specific knowledge article by ID.
 
-    Args:
-        config: Server configuration.
-        auth_manager: Authentication manager.
-        params: Parameters for getting the article.
-
-    Returns:
-        Dictionary with article details.
-    """
     api_url = f"{config.api_url}/table/kb_knowledge/{params.article_id}"
 
-    # Build query parameters
     query_params = {
         "sysparm_display_value": "true",
     }
 
-    # Make request
     try:
         response = requests.get(
             api_url,
@@ -736,10 +590,8 @@ def get_article(
         )
         response.raise_for_status()
 
-        # Get the JSON response
         json_response = response.json()
         
-        # Safely extract the result
         if isinstance(json_response, dict) and "result" in json_response:
             result = json_response.get("result", {})
         else:
@@ -755,12 +607,10 @@ def get_article(
                 "message": f"Article with ID {params.article_id} not found",
             }
 
-        # Extract values safely
         article_id = result.get("sys_id", "")
         title = result.get("short_description", "")
         text = result.get("text", "")
         
-        # Extract nested values safely
         knowledge_base = ""
         if isinstance(result.get("kb_knowledge_base"), dict):
             knowledge_base = result["kb_knowledge_base"].get("display_value", "")
@@ -817,30 +667,17 @@ def list_categories(
     auth_manager: AuthManager,
     params: ListCategoriesParams,
 ) -> Dict[str, Any]:
-    """
-    List categories in a knowledge base.
 
-    Args:
-        config: Server configuration.
-        auth_manager: Authentication manager.
-        params: Parameters for listing categories.
-
-    Returns:
-        Dictionary with list of categories and metadata.
-    """
     api_url = f"{config.api_url}/table/kb_category"
 
-    # Build query parameters
     query_params = {
         "sysparm_limit": params.limit,
         "sysparm_offset": params.offset,
         "sysparm_display_value": "all",
     }
 
-    # Build query string
     query_parts = []
     if params.knowledge_base:
-        # Try different query format to ensure we match by sys_id value
         query_parts.append(f"kb_knowledge_base.sys_id={params.knowledge_base}")
     if params.parent_category:
         query_parts.append(f"parent.sys_id={params.parent_category}")
@@ -854,10 +691,8 @@ def list_categories(
         logger.debug(f"Constructed query string: {query_string}")
         query_params["sysparm_query"] = query_string
     
-    # Log the query parameters for debugging
     logger.debug(f"Listing categories with query params: {query_params}")
 
-    # Make request
     try:
         response = requests.get(
             api_url,
@@ -867,10 +702,8 @@ def list_categories(
         )
         response.raise_for_status()
 
-        # Get the JSON response
         json_response = response.json()
         
-        # Safely extract the result
         if isinstance(json_response, dict) and "result" in json_response:
             result = json_response.get("result", [])
         else:
@@ -884,48 +717,40 @@ def list_categories(
                 "offset": params.offset,
             }
 
-        # Transform the results
         categories = []
         
-        # Handle either string or list
         if isinstance(result, list):
             for category_item in result:
                 if not isinstance(category_item, dict):
                     logger.warning("Skipping non-dictionary category item: %s", category_item)
                     continue
                     
-                # Safely extract values
                 category_id = category_item.get("sys_id", "")
                 title = category_item.get("label", "")
                 description = category_item.get("description", "")
                 
-                # Extract knowledge base - handle both dictionary and string cases
                 knowledge_base = ""
                 kb_field = category_item.get("kb_knowledge_base")
                 if isinstance(kb_field, dict):
                     knowledge_base = kb_field.get("display_value", "")
                 elif isinstance(kb_field, str):
                     knowledge_base = kb_field
-                # Also check if kb_knowledge_base is missing but there's a separate value field
                 elif "kb_knowledge_base_value" in category_item:
                     knowledge_base = category_item.get("kb_knowledge_base_value", "")
                 elif "kb_knowledge_base.display_value" in category_item:
                     knowledge_base = category_item.get("kb_knowledge_base.display_value", "")
                 
-                # Extract parent category - handle both dictionary and string cases
                 parent = ""
                 parent_field = category_item.get("parent")
                 if isinstance(parent_field, dict):
                     parent = parent_field.get("display_value", "")
                 elif isinstance(parent_field, str):
                     parent = parent_field
-                # Also check alternative field names
                 elif "parent_value" in category_item:
                     parent = category_item.get("parent_value", "")
                 elif "parent.display_value" in category_item:
                     parent = category_item.get("parent.display_value", "")
                 
-                # Convert active to boolean - handle string or boolean types
                 active_field = category_item.get("active")
                 if isinstance(active_field, str):
                     active = active_field.lower() == "true"
@@ -948,7 +773,6 @@ def list_categories(
                     "updated": updated,
                 })
                 
-                # Log for debugging purposes
                 logger.debug(f"Processed category: {title}, KB: {knowledge_base}, Parent: {parent}")
         else:
             logger.warning("Result is not a list: %s", result)

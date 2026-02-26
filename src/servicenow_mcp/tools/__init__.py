@@ -15,9 +15,6 @@ from servicenow_mcp.tools.table_tools import (
     list_records,
     get_record,
 )
-from servicenow_mcp.tools.extract_topic import (
-    extract_topic,
-)
 
 __all__ = [
     "create_knowledge_base",
@@ -33,5 +30,4 @@ __all__ = [
     "get_table",
     "list_records",
     "get_record",
-    "extract_topic",
 ]

@@ -1,7 +1,3 @@
-"""
-Configuration module for the ServiceNow MCP server.
-"""
-
 from enum import Enum
 from typing import Optional
 
@@ -9,7 +5,6 @@ from pydantic import BaseModel, Field
 
 
 class AuthType(str, Enum):
-    """Authentication types supported by the ServiceNow MCP server."""
 
     BASIC = "basic"
     OAUTH = "oauth"
@@ -17,14 +12,12 @@ class AuthType(str, Enum):
 
 
 class BasicAuthConfig(BaseModel):
-    """Configuration for basic authentication."""
 
     username: str
     password: str
 
 
 class OAuthConfig(BaseModel):
-    """Configuration for OAuth authentication."""
 
     client_id: str
     client_secret: str
@@ -34,14 +27,12 @@ class OAuthConfig(BaseModel):
 
 
 class ApiKeyConfig(BaseModel):
-    """Configuration for API key authentication."""
 
     api_key: str
     header_name: str = "X-ServiceNow-API-Key"
 
 
 class AuthConfig(BaseModel):
-    """Authentication configuration."""
 
     type: AuthType
     basic: Optional[BasicAuthConfig] = None
@@ -50,7 +41,6 @@ class AuthConfig(BaseModel):
 
 
 class ServerConfig(BaseModel):
-    """Server configuration."""
 
     instance_url: str
     auth: AuthConfig
@@ -59,5 +49,4 @@ class ServerConfig(BaseModel):
 
     @property
     def api_url(self) -> str:
-        """Get the API URL for the ServiceNow instance."""
         return f"{self.instance_url}/api/now"

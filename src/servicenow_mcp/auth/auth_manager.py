@@ -1,7 +1,3 @@
-"""
-Authentication manager for the ServiceNow MCP server.
-"""
-
 import base64
 import logging
 import os
@@ -17,33 +13,15 @@ logger = logging.getLogger(__name__)
 
 
 class AuthManager:
-    """
-    Authentication manager for ServiceNow API.
-    
-    This class handles authentication with the ServiceNow API using
-    different authentication methods.
-    """
     
     def __init__(self, config: AuthConfig, instance_url: str = None):
-        """
-        Initialize the authentication manager.
-        
-        Args:
-            config: Authentication configuration.
-            instance_url: ServiceNow instance URL.
-        """
         self.config = config
         self.instance_url = instance_url
         self.token: Optional[str] = None
         self.token_type: Optional[str] = None
     
     def get_headers(self) -> Dict[str, str]:
-        """
-        Get the authentication headers for API requests.
-        
-        Returns:
-            Dict[str, str]: Headers to include in API requests.
-        """
+
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/json",
@@ -72,17 +50,11 @@ class AuthManager:
         return headers
     
     def _get_oauth_token(self):
-        """
-        Get an OAuth token from ServiceNow.
-        
-        Raises:
-            ValueError: If OAuth configuration is missing or token request fails.
-        """
+
         if not self.config.oauth:
             raise ValueError("OAuth configuration is required")
         oauth_config = self.config.oauth
 
-        # Determine token URL
         token_url = oauth_config.token_url
         if not token_url:
             if not self.instance_url:
@@ -93,7 +65,6 @@ class AuthManager:
             instance_name = instance_parts[0].split("//")[-1]
             token_url = f"https://{instance_name}.service-now.com/oauth_token.do"
 
-        # Prepare Authorization header
         auth_str = f"{oauth_config.client_id}:{oauth_config.client_secret}"
         auth_header = base64.b64encode(auth_str.encode()).decode()
         headers = {
@@ -101,7 +72,6 @@ class AuthManager:
             "Content-Type": "application/x-www-form-urlencoded"
         }
 
-        # Try client_credentials grant first
         data_client_credentials = {
             "grant_type": "client_credentials"
         }
@@ -118,7 +88,6 @@ class AuthManager:
             self.token_type = token_data.get("token_type", "Bearer")
             return
 
-        # Try password grant if client_credentials failed
         if oauth_config.username and oauth_config.password:
             data_password = {
                 "grant_type": "password",
@@ -141,6 +110,5 @@ class AuthManager:
         raise ValueError("Failed to get OAuth token using both client_credentials and password grants.")
     
     def refresh_token(self):
-        """Refresh the OAuth token if using OAuth authentication."""
         if self.config.type == AuthType.OAUTH:
             self._get_oauth_token() 

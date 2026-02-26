@@ -1,0 +1,7 @@
+none: []
+
+docs_query:
+  - query_moveworks_docs
+
+full:
+  - query_moveworks_docs
