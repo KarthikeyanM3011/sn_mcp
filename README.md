@@ -3,7 +3,6 @@
 **Dual-server MCP implementation combining ServiceNow API integration with intelligent Moveworks documentation search**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![MCP 1.3.0](https://img.shields.io/badge/MCP-1.3.0-green.svg)](https://github.com/modelcontextprotocol)
 
 ## Overview
@@ -819,43 +818,6 @@ sn_mcp/
 
 ---
 
-## Dependencies
-
-### Core Dependencies
-
-- **mcp[cli]==1.3.0** - Model Context Protocol SDK
-- **requests>=2.28.0** - HTTP client for ServiceNow API
-- **pydantic>=2.0.0** - Data validation and configuration
-- **python-dotenv>=1.0.0** - Environment variable management
-
-### Web & Server
-
-- **starlette>=0.27.0** - ASGI framework for SSE server
-- **uvicorn>=0.22.0** - ASGI server
-- **httpx>=0.24.0** - Async HTTP client
-
-### Documentation & Search
-
-- **beautifulsoup4>=4.12.0** - HTML parsing and extraction
-- **PyYAML>=6.0** - Configuration file parsing
-- **sentence-transformers>=2.2.0** - Semantic search embeddings
-- **numpy>=1.24.0** - Vector operations and storage
-
-### Development Dependencies
-
-- **pytest>=7.0.0** - Testing framework
-- **pytest-cov>=4.0.0** - Code coverage
-- **black>=23.0.0** - Code formatting
-- **isort>=5.12.0** - Import sorting
-- **mypy>=1.0.0** - Type checking
-- **ruff>=0.0.1** - Fast Python linter
-
----
-
-## Contributing
-
-Contributions are welcome! Here's how to get started:
-
 ### Development Setup
 
 ```bash
@@ -874,23 +836,6 @@ python -m moveworks_mcp.cli
 
 python -m servicenow_mcp.cli
 ```
-
-### Ideas for Contributions
-
-- 🔧 Add new ServiceNow tools (incidents, changes, catalog items)
-- 🌐 Support additional documentation sites
-- 🎨 Improve search relevance algorithms
-- 📊 Add analytics and metrics
-- 🐳 Create Docker deployment examples
-- 📖 Improve documentation
-- 🐛 Fix bugs and improve error handling
-- ⚡ Performance optimizations
-
----
-
-## License
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
@@ -911,36 +856,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ---
 
-## What's Next?
-
-### Roadmap
-
-- [ ] **Additional ServiceNow Tools**
-  - Incident management (create, update, resolve)
-  - Change request workflows
-  - Service catalog integration
-  - User and group management
-
-- [ ] **Enhanced Search**
-  - Multi-language support
-  - Query auto-complete
-  - Search result ranking improvements
-  - Fuzzy matching
-
-- [ ] **Developer Experience**
-  - Docker Compose setup
-  - Kubernetes deployment examples
-  - Web UI for KB management
-  - Interactive documentation
-
-- [ ] **Performance**
-  - Incremental indexing
-  - Parallel crawling
-  - Caching improvements
-  - Connection pooling
-
----
-
 ## Getting Help
 
 If you encounter issues:
@@ -953,9 +868,3 @@ If you encounter issues:
    - Steps to reproduce
    - Error messages
    - Configuration (sanitized)
-
----
-
-**Made with ❤️ for the Claude AI and MCP community**
-
-*Empowering AI assistants with enterprise integrations and intelligent documentation search*
