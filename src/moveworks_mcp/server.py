@@ -1,3 +1,4 @@
+import inspect
 import json
 import logging
 from typing import Any, Dict, List, Union
@@ -22,21 +23,22 @@ def serialize_tool_output(result: Any, tool_name: str) -> str:
                 parsed = json.loads(result)
                 return json.dumps(parsed, indent=2)
             except json.JSONDecodeError:
-                return result  
+                return result
         elif isinstance(result, dict):
             return json.dumps(result, indent=2)
         elif hasattr(result, "model_dump_json"):
             try:
                 return result.model_dump_json(indent=2)
-            except TypeError:  
+            except TypeError:
                 return json.dumps(result.model_dump(), indent=2)
-        elif hasattr(result, "model_dump"):  
+        elif hasattr(result, "model_dump"):
             return json.dumps(result.model_dump(), indent=2)
-        elif hasattr(result, "dict"): 
+        elif hasattr(result, "dict"):
             return json.dumps(result.dict(), indent=2)
         else:
             logger.warning(
-                f"Could not serialize result for tool '{tool_name}' to JSON, falling back to str(). Type: {type(result)}"
+                f"Could not serialize result for tool '{tool_name}' to JSON, falling back to str(). "
+                f"Type: {type(result)}"
             )
             return str(result)
     except Exception as e:
@@ -55,7 +57,7 @@ class MoveworksMCP:
             self.config = config
 
         self.auth_manager = AuthManager()
-        self.mcp_server = Server("Moveworks")  
+        self.mcp_server = Server("Moveworks")
         self.name = "Moveworks"
 
         self.tool_definitions = get_tool_definitions()
@@ -107,7 +109,10 @@ class MoveworksMCP:
             raise ValueError(f"Failed to parse arguments for tool '{name}': {e}")
 
         try:
-            result = impl_func(self.config, self.auth_manager, params)
+            if inspect.iscoroutinefunction(impl_func):
+                result = await impl_func(self.config, self.auth_manager, params)
+            else:
+                result = impl_func(self.config, self.auth_manager, params)
             logger.debug(f"Raw result type from tool '{name}': {type(result)}")
         except Exception as e:
             logger.error(f"Error executing tool '{name}': {e}", exc_info=True)

@@ -1,19 +1,15 @@
-from moveworks_mcp.tools.docs_crawler import (
-    query_moveworks_docs,
-)
-from moveworks_mcp.tools.indexer import (
-    index_url,
-    index_multiple_urls,
-    list_indexed_content,
-    remove_indexed_content,
-    refresh_all_indexed_content,
+from moveworks_mcp.tools.kb_tools import (
+    mw_kb_index_pages,
+    mw_kb_index_domain,
+    mw_kb_list,
+    mw_kb_remove,
+    mw_kb_search,
 )
 
 __all__ = [
-    "query_moveworks_docs",
-    "index_url",
-    "index_multiple_urls",
-    "list_indexed_content",
-    "remove_indexed_content",
-    "refresh_all_indexed_content",
+    "mw_kb_index_pages",
+    "mw_kb_index_domain",
+    "mw_kb_list",
+    "mw_kb_remove",
+    "mw_kb_search",
 ]

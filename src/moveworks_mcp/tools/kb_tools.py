@@ -1,459 +1,224 @@
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
 from moveworks_mcp.auth.auth_manager import AuthManager
-from moveworks_mcp.tools.docs_crawler import (
-    DocumentPage,
-    build_sitemap_from_xml,
-    build_sitemap_manual,
-    fetch_page_content,
-    select_relevant_pages,
-)
-from moveworks_mcp.tools.kb_search import HybridSearchEngine
-from moveworks_mcp.tools.knowledge_base_manager import CachedDocument, KnowledgeBaseManager
+from moveworks_mcp.kb.crawler import DocCrawler
+from moveworks_mcp.kb.indexer import KBIndexer
+from moveworks_mcp.kb.search import KBSearch
 from moveworks_mcp.utils.config import ServerConfig
 
 logger = logging.getLogger(__name__)
 
+# Singletons — loaded once, reused across all tool calls
+_indexer: Optional[KBIndexer] = None
+_searcher: Optional[KBSearch] = None
 
-class IndexDocumentationParams(BaseModel):
-    kb_name: str = Field(..., description="Name of the knowledge base to create or update")
-    source_url: str = Field(
-        default="https://help.moveworks.com/docs",
-        description="Base URL of the documentation site to index"
-    )
-    description: str = Field(
-        default="",
-        description="Description of the knowledge base"
-    )
-    use_sitemap: bool = Field(
-        default=True,
-        description="Use sitemap.xml for faster discovery (default: True)"
-    )
-    max_pages: int = Field(
-        default=50,
-        description="Maximum number of pages to index (default: 50)"
+
+def get_indexer() -> KBIndexer:
+    global _indexer
+    if _indexer is None:
+        _indexer = KBIndexer()
+    return _indexer
+
+
+def get_searcher() -> KBSearch:
+    global _searcher
+    if _searcher is None:
+        _searcher = KBSearch()
+    return _searcher
+
+
+# ── Pydantic param models ──────────────────────────────────────────────────
+
+
+class MwKbIndexPagesParams(BaseModel):
+    urls: List[str] = Field(
+        ...,
+        description="One or more page URLs to crawl and index individually (no link-following)"
     )
     force_refresh: bool = Field(
         default=False,
-        description="Force re-indexing even if KB already exists (default: False)"
+        description="If True, re-index pages even if they already exist in the knowledge base (overwrite)"
     )
 
 
-class SearchKnowledgeBaseParams(BaseModel):
-    """Parameters for searching a knowledge base."""
-
-    query: str = Field(..., description="The question or topic to search for")
-    kb_name: str = Field(
-        default="moveworks_docs",
-        description="Name of the knowledge base to search (default: moveworks_docs)"
+class MwKbIndexDomainParams(BaseModel):
+    sitemap_url: str = Field(
+        ...,
+        description="Full URL to the sitemap.xml of the documentation site"
     )
-    max_results: int = Field(
-        default=10,
-        description="Maximum number of results to return (default: 10)"
+    base_url: str = Field(
+        ...,
+        description="Base URL of the documentation domain (e.g. https://help.moveworks.com)"
     )
-    use_semantic: bool = Field(
-        default=True,
-        description="Use semantic search with embeddings (default: True, requires sentence-transformers)"
+    max_pages: int = Field(
+        default=300,
+        description="Maximum number of pages to crawl and index (default: 300)"
     )
-    return_format: str = Field(
-        default="aggregated",
-        description="Return format: 'aggregated' (combined content) or 'structured' (list of pages)"
+    force_refresh: bool = Field(
+        default=False,
+        description="If True, re-index pages even if they already exist in the knowledge base (overwrite)"
     )
 
 
-class ListKnowledgeBasesParams(BaseModel):
-    pass  
-
-
-class DeleteKnowledgeBaseParams(BaseModel):
-    kb_name: str = Field(..., description="Name of the knowledge base to delete")
-
-
-class ListKBDocumentsParams(BaseModel):
-    kb_name: str = Field(
-        default="moveworks_docs",
-        description="Name of the knowledge base to list documents from"
+class MwKbListParams(BaseModel):
+    domain: Optional[str] = Field(
+        default=None,
+        description="Optional domain filter (e.g. 'help.moveworks.com'). Omit to list all indexed pages."
     )
 
 
-class GetDocumentByURLParams(BaseModel):
-    url: str = Field(..., description="The exact URL of the document to retrieve")
-    kb_name: str = Field(
-        default="moveworks_docs",
-        description="Name of the knowledge base to search in"
+class MwKbRemoveParams(BaseModel):
+    urls: Optional[List[str]] = Field(
+        default=None,
+        description="List of specific page URLs to remove from the index"
+    )
+    domain: Optional[str] = Field(
+        default=None,
+        description="Domain whose pages should all be removed (e.g. 'help.moveworks.com')"
     )
 
 
-_kb_manager = None
+class MwKbSearchParams(BaseModel):
+    query: str = Field(
+        ...,
+        description="Natural-language search query. Returns top-10 pages via hybrid semantic + BM25 search."
+    )
 
 
-def get_kb_manager() -> KnowledgeBaseManager:
-    """Get or create the global knowledge base manager instance."""
-    global _kb_manager
-    if _kb_manager is None:
-        _kb_manager = KnowledgeBaseManager()
-    return _kb_manager
+# ── Tool implementations ───────────────────────────────────────────────────
 
 
-def index_documentation(
+async def mw_kb_index_pages(
     config: ServerConfig,
     auth_manager: AuthManager,
-    params: IndexDocumentationParams
+    params: MwKbIndexPagesParams,
 ) -> Dict[str, Any]:
-
     try:
-        logger.info(f"=" * 80)
-        logger.info(f"INDEXING DOCUMENTATION: {params.source_url}")
-        logger.info(f"Knowledge Base: {params.kb_name}")
-        logger.info(f"=" * 80)
-
-        kb_manager = get_kb_manager()
-
-        # Check if KB exists
-        if kb_manager.kb_exists(params.kb_name):
-            if not params.force_refresh:
-                logger.info(f"Knowledge base '{params.kb_name}' already exists")
-                stats = kb_manager.get_kb_stats(params.kb_name)
-                return {
-                    "success": True,
-                    "message": f"Knowledge base '{params.kb_name}' already exists. Use force_refresh=true to re-index.",
-                    "kb_name": params.kb_name,
-                    "stats": stats,
-                }
-            else:
-                logger.info(f"Force refresh enabled. Deleting existing KB '{params.kb_name}'")
-                kb_manager.delete_kb(params.kb_name)
-
-        logger.info(f"Creating knowledge base '{params.kb_name}'")
-        kb_config = {
-            "kb_name": params.kb_name,
-            "description": params.description,
-            "source_url": params.source_url,
-        }
-        kb_manager.create_kb(params.kb_name, config=kb_config)
-
-        logger.info("Step 1: Building sitemap...")
-        if params.use_sitemap:
-            sitemap_url = f"{params.source_url.rstrip('/')}/sitemap.xml"
-            if "help.moveworks.com" in params.source_url:
-                sitemap_url = "https://help.moveworks.com/sitemap.xml"
-            sitemap = build_sitemap_from_xml(sitemap_url, config.timeout)
-        else:
-            sitemap = build_sitemap_manual(
-                base_url=params.source_url,
-                max_depth=3,
-                timeout=config.timeout
-            )
-
-        if not sitemap:
-            return {
-                "success": False,
-                "message": "Failed to build documentation sitemap",
-                "kb_name": params.kb_name,
-            }
-
-        logger.info(f"Discovered {len(sitemap)} pages")
-
-        logger.info(f"Step 2: Selecting up to {params.max_pages} pages to index...")
-        pages_list = list(sitemap.values())[:params.max_pages]
-
-        logger.info(f"Step 3: Fetching content for {len(pages_list)} pages...")
-        pages_with_content = fetch_page_content(pages_list, config.timeout)
-
-        logger.info(f"Step 4: Indexing documents into KB '{params.kb_name}'...")
-        indexed_count = 0
-        for page in pages_with_content:
-            if not page.content:
-                continue
-
-            cached_doc = CachedDocument(
-                url=page.url,
-                title=page.title,
-                content=page.content,
-                description=page.description,
-                breadcrumb=page.breadcrumb,
-            )
-
-            kb_manager.add_document(params.kb_name, cached_doc)
-            indexed_count += 1
-
-        stats = kb_manager.get_kb_stats(params.kb_name)
-
-        logger.info(f"Successfully indexed {indexed_count} documents")
-        logger.info(f"Total content: {stats['total_content_chars']} characters")
-
-        return {
-            "success": True,
-            "message": f"Successfully indexed {indexed_count} documents into knowledge base '{params.kb_name}'",
-            "kb_name": params.kb_name,
-            "indexed_count": indexed_count,
-            "stats": stats,
-        }
-
-    except Exception as e:
-        logger.error(f"Error indexing documentation: {e}", exc_info=True)
-        return {
-            "success": False,
-            "message": f"Error: {str(e)}",
-            "kb_name": params.kb_name,
-        }
-
-
-def search_knowledge_base(
-    config: ServerConfig,
-    auth_manager: AuthManager,
-    params: SearchKnowledgeBaseParams
-) -> Dict[str, Any]:
-
-    try:
-        logger.info(f"=" * 80)
-        logger.info(f"SEARCHING KNOWLEDGE BASE: {params.kb_name}")
-        logger.info(f"Query: {params.query}")
-        logger.info(f"=" * 80)
-
-        kb_manager = get_kb_manager()
-
-        if not kb_manager.kb_exists(params.kb_name):
-            available_kbs = kb_manager.list_knowledge_bases()
-            kb_names = [kb["kb_name"] for kb in available_kbs]
-            return {
-                "success": False,
-                "message": f"Knowledge base '{params.kb_name}' not found. Available KBs: {kb_names}",
-                "query": params.query,
-                "available_knowledge_bases": kb_names,
-            }
-
-        search_engine = HybridSearchEngine(kb_manager)
-        results = search_engine.hybrid_search(
-            kb_name=params.kb_name,
-            query=params.query,
-            max_results=params.max_results,
-            use_semantic=params.use_semantic,
+        crawler = DocCrawler(base_url=params.urls[0])
+        pages = await crawler.crawl_multiple(params.urls)
+        indexer = get_indexer()
+        result = indexer.index_pages(pages, force=params.force_refresh)
+        logger.info(
+            "mw_kb_index_pages: %d indexed, %d skipped",
+            len(result["indexed"]), len(result["skipped"]),
         )
-
-        if not results:
-            return {
-                "success": True,
-                "message": "No relevant documents found",
-                "query": params.query,
-                "kb_name": params.kb_name,
-                "results_count": 0,
-                "results": [],
-            }
-
-        if params.return_format == "aggregated":
-            all_content_parts = []
-            for doc in results:
-                all_content_parts.append(f"\n\n{'=' * 80}\n")
-                all_content_parts.append(f"SOURCE: {doc.title}\n")
-                all_content_parts.append(f"URL: {doc.url}\n")
-                if doc.breadcrumb:
-                    all_content_parts.append(f"PATH: {doc.breadcrumb}\n")
-                all_content_parts.append(f"RELEVANCE: {doc.relevance_score:.1f}\n")
-                all_content_parts.append(f"{'=' * 80}\n\n")
-                all_content_parts.append(doc.content)
-
-            aggregated_content = ''.join(all_content_parts)
-
-            return {
-                "success": True,
-                "message": f"Found {len(results)} relevant documents",
-                "query": params.query,
-                "kb_name": params.kb_name,
-                "results_count": len(results),
-                "aggregated_content": aggregated_content,
-                "pages": [
-                    {
-                        "title": doc.title,
-                        "url": doc.url,
-                        "description": doc.description,
-                        "breadcrumb": doc.breadcrumb,
-                        "relevance_score": doc.relevance_score,
-                    }
-                    for doc in results
-                ],
-            }
-        else:
-            return {
-                "success": True,
-                "message": f"Found {len(results)} relevant documents",
-                "query": params.query,
-                "kb_name": params.kb_name,
-                "results_count": len(results),
-                "results": [
-                    {
-                        "title": doc.title,
-                        "url": doc.url,
-                        "description": doc.description,
-                        "breadcrumb": doc.breadcrumb,
-                        "content": doc.content,
-                        "relevance_score": doc.relevance_score,
-                    }
-                    for doc in results
-                ],
-            }
-
-    except Exception as e:
-        logger.error(f"Error searching knowledge base: {e}", exc_info=True)
         return {
-            "success": False,
-            "message": f"Error: {str(e)}",
+            "status": "success",
+            "indexed_count": len(result["indexed"]),
+            "skipped_count": len(result["skipped"]),
+            "indexed_urls": result["indexed"],
+            "skipped_urls": result["skipped"],
+        }
+    except Exception as e:
+        logger.error(f"mw_kb_index_pages error: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+
+async def mw_kb_index_domain(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: MwKbIndexDomainParams,
+) -> Dict[str, Any]:
+    try:
+        crawler = DocCrawler(base_url=params.base_url, max_pages=params.max_pages)
+        pages = await crawler.crawl_domain(sitemap_url=params.sitemap_url)
+        indexer = get_indexer()
+        result = indexer.index_pages(pages, force=params.force_refresh)
+        logger.info(
+            "mw_kb_index_domain: found %d pages, %d indexed, %d skipped",
+            len(pages), len(result["indexed"]), len(result["skipped"]),
+        )
+        return {
+            "status": "success",
+            "domain": params.base_url,
+            "total_pages_found": len(pages),
+            "indexed_count": len(result["indexed"]),
+            "skipped_count": len(result["skipped"]),
+            "indexed_urls": result["indexed"],
+            "skipped_urls": result["skipped"],
+        }
+    except Exception as e:
+        logger.error(f"mw_kb_index_domain error: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+
+def mw_kb_list(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: MwKbListParams,
+) -> Dict[str, Any]:
+    try:
+        indexer = get_indexer()
+        pages = indexer.list_pages(domain=params.domain)
+        grouped: Dict[str, list] = {}
+        for page in pages:
+            d = page["domain"]
+            grouped.setdefault(d, [])
+            grouped[d].append({
+                "url": page["url"],
+                "title": page["title"],
+                "navigation_path": page["breadcrumb"],
+            })
+        return {
+            "total_pages": len(pages),
+            "domains": grouped,
+        }
+    except Exception as e:
+        logger.error(f"mw_kb_list error: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+
+async def mw_kb_remove(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: MwKbRemoveParams,
+) -> Dict[str, Any]:
+    try:
+        indexer = get_indexer()
+        removed = []
+        if params.urls:
+            for url in params.urls:
+                indexer.remove_page(url)
+                removed.append(url)
+        if params.domain:
+            indexer.remove_domain(params.domain)
+            removed.append(f"all pages from domain: {params.domain}")
+        logger.info(f"mw_kb_remove: removed {removed}")
+        return {
+            "status": "success",
+            "removed": removed,
+        }
+    except Exception as e:
+        logger.error(f"mw_kb_remove error: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+
+def mw_kb_search(
+    config: ServerConfig,
+    auth_manager: AuthManager,
+    params: MwKbSearchParams,
+) -> Dict[str, Any]:
+    try:
+        searcher = get_searcher()
+        results = searcher.search(params.query, top_k=10)
+        return {
             "query": params.query,
-            "kb_name": params.kb_name,
+            "total_results": len(results),
+            "results": [
+                {
+                    "rank": i + 1,
+                    "url": r["url"],
+                    "title": r["title"],
+                    "navigation_path": r["breadcrumb"],
+                    "relevance_score": r["score"],
+                    "content": r["content"],
+                }
+                for i, r in enumerate(results)
+            ],
         }
-
-
-def list_knowledge_bases(
-    config: ServerConfig,
-    auth_manager: AuthManager,
-    params: ListKnowledgeBasesParams
-) -> Dict[str, Any]:
-
-    try:
-        kb_manager = get_kb_manager()
-        kb_list = kb_manager.list_knowledge_bases()
-
-        return {
-            "success": True,
-            "message": f"Found {len(kb_list)} knowledge bases",
-            "count": len(kb_list),
-            "knowledge_bases": kb_list,
-        }
-
     except Exception as e:
-        logger.error(f"Error listing knowledge bases: {e}", exc_info=True)
-        return {
-            "success": False,
-            "message": f"Error: {str(e)}",
-            "knowledge_bases": [],
-        }
-
-
-def delete_knowledge_base(
-    config: ServerConfig,
-    auth_manager: AuthManager,
-    params: DeleteKnowledgeBaseParams
-) -> Dict[str, Any]:
-
-    try:
-        kb_manager = get_kb_manager()
-
-        if not kb_manager.kb_exists(params.kb_name):
-            return {
-                "success": False,
-                "message": f"Knowledge base '{params.kb_name}' not found",
-                "kb_name": params.kb_name,
-            }
-
-        kb_manager.delete_kb(params.kb_name)
-
-        return {
-            "success": True,
-            "message": f"Knowledge base '{params.kb_name}' deleted successfully",
-            "kb_name": params.kb_name,
-        }
-
-    except Exception as e:
-        logger.error(f"Error deleting knowledge base: {e}", exc_info=True)
-        return {
-            "success": False,
-            "message": f"Error: {str(e)}",
-            "kb_name": params.kb_name,
-        }
-
-
-def list_kb_documents(
-    config: ServerConfig,
-    auth_manager: AuthManager,
-    params: ListKBDocumentsParams
-) -> Dict[str, Any]:
-
-    try:
-        kb_manager = get_kb_manager()
-
-        if not kb_manager.kb_exists(params.kb_name):
-            available_kbs = kb_manager.list_knowledge_bases()
-            kb_names = [kb["kb_name"] for kb in available_kbs]
-            return {
-                "success": False,
-                "message": f"Knowledge base '{params.kb_name}' not found",
-                "available_knowledge_bases": kb_names,
-            }
-
-        documents = kb_manager.get_all_documents(params.kb_name)
-
-        doc_list = []
-        for doc in documents:
-            doc_info = {
-                "site_URL": doc.url,
-                "title": doc.title,
-                "description": doc.description,
-            }
-            doc_list.append(doc_info)
-
-        return {
-            "success": True,
-            "message": f"Found {len(doc_list)} documents in '{params.kb_name}'",
-            "kb_name": params.kb_name,
-            "document_count": len(doc_list),
-            "documents": doc_list,
-        }
-
-    except Exception as e:
-        logger.error(f"Error listing KB documents: {e}", exc_info=True)
-        return {
-            "success": False,
-            "message": f"Error: {str(e)}",
-            "kb_name": params.kb_name,
-        }
-
-
-def get_document_by_url(
-    config: ServerConfig,
-    auth_manager: AuthManager,
-    params: GetDocumentByURLParams
-) -> Dict[str, Any]:
-    try:
-        kb_manager = get_kb_manager()
-
-        if not kb_manager.kb_exists(params.kb_name):
-            available_kbs = kb_manager.list_knowledge_bases()
-            kb_names = [kb["kb_name"] for kb in available_kbs]
-            return {
-                "success": False,
-                "message": f"Knowledge base '{params.kb_name}' not found",
-                "available_knowledge_bases": kb_names,
-            }
-
-        document = kb_manager.get_document(params.kb_name, params.url)
-
-        if not document:
-            return {
-                "success": False,
-                "message": f"Document with URL '{params.url}' not found in KB '{params.kb_name}'",
-                "url": params.url,
-                "kb_name": params.kb_name,
-            }
-
-        return {
-            "success": True,
-            "message": f"Found document: {document.title}",
-            "url": document.url,
-            "title": document.title,
-            "description": document.description,
-            "breadcrumb": document.breadcrumb,
-            "content": document.content,
-            "content_length": len(document.content),
-        }
-
-    except Exception as e:
-        logger.error(f"Error retrieving document by URL: {e}", exc_info=True)
-        return {
-            "success": False,
-            "message": f"Error: {str(e)}",
-            "url": params.url,
-            "kb_name": params.kb_name,
-        }
+        logger.error(f"mw_kb_search error: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
